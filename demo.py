@@ -526,16 +526,26 @@ class Rectangle(pygame.Rect):
 
 def draw_line(point: AlignPoint, shape: Rectangle, direction='horizontal'):
     """ Draw a line between two rectangle"""
-    if direction == 'horizontal':
+    if direction == 'horizontal' and shape is not None:
         pygame.draw.line(screen,
                          HIGHTLIGHT_COLOR,
                          (point.idx, point.node.get_bottom_idx()),
                          (point.idx, shape.get_bottom_idx()))
-    else:
+    elif direction == 'horizontal':
+        pygame.draw.line(screen,
+                         HIGHTLIGHT_COLOR,
+                         (point.idx, 0),
+                         (point.idx, SCREEN_HEIGHT))
+    elif shape is not None:
         pygame.draw.line(screen,
                          HIGHTLIGHT_COLOR,
                          (point.node.get_right_idx(), point.idx),
                          (shape.get_right_idx(), point.idx))
+    else:
+        pygame.draw.line(screen,
+                         HIGHTLIGHT_COLOR,
+                         (0, point.idx),
+                         (SCREEN_WIDTH, point.idx))
 
 
 def main():
@@ -621,6 +631,8 @@ def main():
                                      HIGHTLIGHT_COLOR,
                                      horizontal_aligned_node.node)
                     draw_line(horizontal_aligned_node, _node)
+                else:
+                    draw_line(horizontal_aligned_node, None)
             # Vertical direction
             if vertical_aligned_node is not None:
                 pygame.draw.rect(screen, HIGHTLIGHT_COLOR, _node)
@@ -629,12 +641,15 @@ def main():
                                      HIGHTLIGHT_COLOR,
                                      vertical_aligned_node.node)
                     draw_line(vertical_aligned_node, _node)
+                else:
+                    draw_line(vertical_aligned_node, None)
 
         # Update the screen
         pygame.display.flip()
 
         # - constant game speed / FPS
         clock.tick(FPS)
+
 
         # Initial the screen
 pygame.init()
