@@ -206,6 +206,7 @@ class Rectangle(pygame.Rect):
     def __init__(self, _x, _y, _width, _height):
         super().__init__(_x, _y, _width, _height)
 
+        # Create AlignPoints for the node
         self._left = AlignPoint(_x, 'left', self)
         self._center_horizontal = AlignPoint(
             int(_x + _width / 2), 'center', self)
@@ -406,7 +407,7 @@ class Rectangle(pygame.Rect):
                 bottom_right < top_left and \
                 bottom_right < top_right and \
                 bottom_right < bottom_left:
-            return closest_distance_to_right_on_bottom
+            return closest_node_to_right_on_bottom
 
         return None
 
@@ -517,7 +518,7 @@ class Rectangle(pygame.Rect):
 
     def draw(self):
         """A method that draw this object into the screen"""
-        pygame.draw.rect(screen, (255, 0, 0), self)
+        pygame.draw.rect(screen, (0, 191, 255), self)
 
 
 def main():
@@ -531,7 +532,9 @@ def main():
     # variables used in handling drag event
     mouse_x = 0
     mouse_y = 0
-    _node = None
+    _node: Rectangle = None
+    horizontal_aligned_node: AlignPoint = None
+    vertical_aligned_node: AlignPoint = None
 
     # Create a triangle
     nodes.append(Rectangle(200, 100, 60, 40))
@@ -565,19 +568,20 @@ def main():
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 is_draging = False
+                _node = None
+                horizontal_aligned_node = None
+                vertical_aligned_node = None
 
             elif event.type == pygame.MOUSEMOTION:
                 if is_draging:
                     (click_x, click_y) = event.pos
-                    result1 = _node.move_horiontally(click_x - mouse_x)
-                    result2 = _node.move_vertically(click_y - mouse_y)
+                    horizontal_aligned_node = \
+                        _node.move_horiontally(click_x - mouse_x)
+                    vertical_aligned_node = \
+                        _node.move_vertically(click_y - mouse_y)
+
                     mouse_x = click_x
                     mouse_y = click_y
-
-                    if result1 is not None:
-                        print(result1)
-                    if result2 is not None:
-                        print(result2)
 
             # if the user click the window close button.
             elif event.type == pygame.QUIT:
@@ -589,6 +593,23 @@ def main():
         # Draw all rectangles
         for node in nodes:
             node.draw()
+
+        # If two nodes are aligned, hightlight them and draw the line
+        if _node is not None:
+            # Horizontal direction
+            if horizontal_aligned_node is not None:
+                pygame.draw.rect(screen, (199, 21, 133), _node)
+                if horizontal_aligned_node.node != "window":
+                    pygame.draw.rect(screen,
+                                     (199, 21, 133),
+                                     horizontal_aligned_node.node)
+            # Vertical direction
+            if vertical_aligned_node is not None:
+                pygame.draw.rect(screen, (199, 21, 133), _node)
+                if vertical_aligned_node.node != "window":
+                    pygame.draw.rect(screen,
+                                     (199, 21, 133),
+                                     vertical_aligned_node.node)
 
         # Update the screen
         pygame.display.flip()
