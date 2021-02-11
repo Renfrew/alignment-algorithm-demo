@@ -6,14 +6,10 @@ Created by Liang Chen (Renfrew) on 2021-02-10.
 
 """
 
-# import sys
 import pygame
 from pygame.constants import K_ESCAPE
-# from pygame.locals import {
 
-# }
-
-# Start the screen
+# Settings
 SCREEN_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT) = (800, 600)
 FPS = 30
 
@@ -23,15 +19,17 @@ class Rectangle(pygame.Rect):
 
     # The screen used to draw itself
     screen = None
-
-    def __init__(self,_x, _y, width, height):
-        super().__init__(_x, _y, width, height)
+    nodes = []
 
     def move_horiontally(self, distance):
         """A method that calculates the alignment status horizontally with other nodes"""
 
+        self.move_ip(distance, 0)
+
     def move_vertically(self, distance):
         """A method that calculates the alignment status vertically with other nodes"""
+
+        self.move_ip(0, distance)
 
     def draw(self):
         """A method that draw this object into the screen"""
@@ -42,13 +40,21 @@ def main():
     """This is the main function of the demo"""
 
     clock = pygame.time.Clock()
+
+    # list of all nodes
     nodes = []
 
-    # Initial the Rectangle
-    Rectangle.screen = screen
+    # variables used in handling drag event
+    mouse_x = 0
+    mouse_y = 0
+    _node = None
 
     # Create a triangle
     nodes.append(Rectangle(100, 200, 80, 40))
+
+    # Initial the Rectangle
+    Rectangle.screen = screen
+    Rectangle.nodes = nodes
 
     is_draging = False
     running = True
@@ -60,18 +66,26 @@ def main():
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 position = (click_x, click_y) = event.pos
-                print(click_x)
-                print(click_y)
 
                 # Check if a node is clicked
                 for node in nodes:
                     if node.collidepoint(position):
-                        print('collision')
                         is_draging = True
+                        mouse_x = click_x
+                        mouse_y = click_y
+                        _node = node
+                        break
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 is_draging = False
-                print('up')
+
+            elif event.type == pygame.MOUSEMOTION:
+                if is_draging:
+                    (click_x, click_y) = event.pos
+                    _node.move_horiontally(click_x - mouse_x)
+                    _node.move_vertically(click_y - mouse_y)
+                    mouse_x = click_x
+                    mouse_y = click_y
 
             # if the user click the window close button.
             elif event.type == pygame.QUIT:
@@ -87,7 +101,7 @@ def main():
         # Update the screen
         pygame.display.flip()
 
-        # - constant game speed / FPS -
+        # - constant game speed / FPS
         clock.tick(FPS)
 
 
