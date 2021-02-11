@@ -14,12 +14,60 @@ SCREEN_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT) = (800, 600)
 FPS = 30
 
 
+class AlignPoint:
+    """This is the doubly linked list class"""
+
+    def __init__(self, idx, position, node):
+        self.idx = idx
+        self.position = position
+        self.node = node
+        self.prew = None
+        self.next = None
+
+    def add(self, node):
+        pass
+
+
 class Rectangle(pygame.Rect):
     """This is the object that can align to other objects"""
 
-    # The screen used to draw itself
+    # The screen used to draw itself and the list of all rectangles
     screen = None
     nodes = []
+
+    # The doubly linked list storing all points that can be used to auto-aligned
+    horizontal = None
+    vertical = None
+
+    def __init__(self, _x, _y, _width, _height):
+        super().__init__(_x, _y, _width, _height)
+
+        self._left = AlignPoint(_x, 'left', self)
+        self._center_horizontal = AlignPoint(_x + _width / 2, 'center', self)
+        self._right = AlignPoint(_x + _width, 'right', self)
+        self._top = AlignPoint(_y, 'top', self)
+        self._center_vertical = AlignPoint(_y + _height / 2, 'center', self)
+        self._bottom = AlignPoint(_y + _height, 'bottom', self)
+
+        # Add all align point to the list
+        if Rectangle.horizontal is None:
+            Rectangle.horizontal = self._left
+
+        if Rectangle.vertical is None:
+            Rectangle.vertical = self._top
+
+        Rectangle.horizontal.add(self._center_horizontal)
+        Rectangle.horizontal.add(self._right)
+        Rectangle.vertical.add(self._center_vertical)
+        Rectangle.vertical.add(self._bottom)
+
+    def get_horizontal_midpoint(self):
+        """Get the midpoint of the width"""
+        return self.width / 2
+
+    def get_vertical_midpoint(self):
+        """Get the midpoint of the height"""
+        return self.height / 2
 
     def move_horiontally(self, distance):
         """A method that calculates the alignment status horizontally with other nodes"""
