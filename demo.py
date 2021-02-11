@@ -294,14 +294,14 @@ class Rectangle(pygame.Rect):
         self.move_ip(distance, 0)
         self.update()
 
-        # Check if it is aligned to the center of viewpoint
+        # Check if it is aligned with the center of viewpoint (horizontal)
         if self.get_center_horizontal_idx() == int(SCREEN_WIDTH / 2):
             return AlignPoint(int(SCREEN_WIDTH / 2), 'center', 'window')
 
         # Check if it is aligned to the center of other nodes
         closest_node = None
         closest_distance = 0
-        # Search all nodess that are aligned with self
+        # Search all nodes that are aligned with self
         for _point in self._center_horizontal.get_center_coincident_point():
             top_distance = self.get_top_idx() - _point.node.get_bottom_idx()
             bottom_distance = _point.node.get_top_idx() - self.get_bottom_idx()
@@ -417,7 +417,145 @@ class Rectangle(pygame.Rect):
     def move_vertically(self, distance):
         """A method that calculates the alignment status vertically with other nodes"""
 
+        # Check if this move would touch the top edge
+        if self.get_top_idx() + distance <= 0:
+            self.move_ip(0, -self.get_top_idx())
+            self.update()
+            return AlignPoint(0, 'top', 'window')
+
+        # Check if this move would touch the bottom edge
+        if self.get_bottom_idx() + distance >= SCREEN_HEIGHT:
+            self.move_ip(0, SCREEN_HEIGHT - 1 - self.get_bottom_idx())
+            self.update()
+            return AlignPoint(SCREEN_HEIGHT - 1, 'bottom', "window")
+
+        # This move is safe, update the position of myself
         self.move_ip(0, distance)
+        self.update()
+
+        # Check if it is aligned with the center of the viewpoint (vertical)
+        if self.get_center_vertical_idx() == int(SCREEN_HEIGHT / 2):
+            return AlignPoint(int(SCREEN_HEIGHT / 2), 'center', 'window')
+
+        # Check if is aligned to the center of other nodes
+        closest_node = None
+        closest_distance = 0
+        # Search all nodes that are aligned with self
+        for _point in self._center_vertical.get_center_coincident_point():
+            left_distance = self.get_left_idx() - _point.node.get_right_idx()
+            right_distance = _point.node.get_left_idx() - self.get_right_idx()
+
+            # Check if node ha the smallest distance to self
+            update1 = closest_node is None
+            update2 = 0 < left_distance < closest_distance
+            update3 = 0 < right_distance < closest_distance
+            if update1 or update2 or update3:
+                closest_node = _point
+                if left_distance > 0:
+                    closest_distance = left_distance
+                else:
+                    closest_distance = right_distance
+
+        # Return the node that is aligned with the center of self, if exists
+        if closest_node is not None:
+            return closest_node
+
+        # Return the node that is aligned with the edge of self
+        return self.move_vertically_helper()
+
+    def move_vertically_helper(self) -> AlignPoint:
+        """This is the helper function of move_vertically
+
+            The function will find the closest node with a edge aligned with self
+        """
+        # Find the nodes that is aligned with the edge of self
+        nodes_aligned_with_top_edge = self._top.get_side_coincident_point()
+        nodes_aligned_with_bottom_edge = self._bottom.get_side_coincident_point()
+
+        (closest_node_to_top_on_left,
+         closest_distance_to_top_on_left,
+         closest_node_to_top_on_right,
+         closest_distance_to_top_on_right
+         ) = self.find_aligned_points(nodes_aligned_with_top_edge, 'vertical')
+
+        (closest_node_to_bottom_on_left,
+         closest_distance_to_bottom_on_left,
+         closest_node_to_bottom_on_right,
+         closest_distance_to_bottom_on_right
+         ) = self.find_aligned_points(nodes_aligned_with_bottom_edge, 'vertical')
+
+        # Remove aligned nodes which may be blocked by other nodes
+        if closest_node_to_top_on_left is not None and \
+                self.find_blocking_point(
+                    self.get_top_point(),
+                    closest_node_to_top_on_left.node,
+                    self,
+                    'vertical'
+                ):
+            closest_node_to_top_on_left = None
+            closest_distance_to_top_on_left = sys.maxsize
+
+        if closest_node_to_bottom_on_left is not None and \
+                self.find_blocking_point(
+                    self.get_bottom_point(),
+                    closest_node_to_bottom_on_left.node,
+                    self,
+                    'vertical'
+                ):
+            closest_node_to_bottom_on_left = None
+            closest_distance_to_bottom_on_left = sys.maxsize
+
+        if closest_node_to_top_on_right is not None and \
+                self.find_blocking_point(
+                    self.get_top_point(),
+                    self,
+                    closest_node_to_top_on_right.node,
+                    'vertical'
+                ):
+            closest_node_to_top_on_right = None
+            closest_distance_to_top_on_right = sys.maxsize
+
+        if closest_node_to_bottom_on_right is not None and \
+                self.find_blocking_point(
+                    self.get_bottom_point(),
+                    self,
+                    closest_node_to_bottom_on_right.node,
+                    'vertical'
+                ):
+            closest_node_to_bottom_on_right = None
+            closest_distance_to_bottom_on_right = sys.maxsize
+
+        # Output the result, which is the closest node to the moving node
+        left_top = closest_distance_to_top_on_left
+        left_bottom = closest_distance_to_bottom_on_left
+        right_top = closest_distance_to_top_on_right
+        right_bottom = closest_distance_to_bottom_on_right
+
+        if closest_node_to_top_on_left is not None and \
+                left_top < left_bottom and \
+                left_top < right_top and \
+                left_top < right_bottom:
+            return closest_node_to_top_on_left
+
+        if closest_node_to_top_on_right is not None and \
+                right_top < left_top and \
+                right_top < left_bottom and \
+                right_top < right_bottom:
+            return closest_node_to_top_on_right
+
+        if closest_node_to_bottom_on_left is not None and \
+                left_bottom < left_top and \
+                left_bottom < right_top and \
+                left_bottom < right_bottom:
+            return closest_node_to_bottom_on_left
+
+        if closest_node_to_bottom_on_right is not None and \
+                right_bottom < left_top and \
+                right_bottom < right_top and \
+                right_bottom < left_bottom:
+            return closest_node_to_bottom_on_right
+
+        return None
 
     def find_aligned_points(
             self,
@@ -640,9 +778,9 @@ def main():
                     pygame.draw.rect(screen,
                                      HIGHTLIGHT_COLOR,
                                      vertical_aligned_node.node)
-                    draw_line(vertical_aligned_node, _node)
+                    draw_line(vertical_aligned_node, _node, 'vertical')
                 else:
-                    draw_line(vertical_aligned_node, None)
+                    draw_line(vertical_aligned_node, None, 'vertical')
 
         # Update the screen
         pygame.display.flip()
