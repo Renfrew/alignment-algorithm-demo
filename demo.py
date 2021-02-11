@@ -15,6 +15,7 @@ from pygame.constants import K_ESCAPE
 
 # Settings
 SCREEN_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT) = (800, 600)
+THRESHOLD = 3
 FPS = 30
 
 DEFAULT_COLOR = (199, 21, 133)
@@ -140,13 +141,15 @@ class AlignPoint:
 
         # Find all coincident points on the left side
         __prew = self._prew
-        while __prew is not None and __prew.idx == self.idx:
+        while __prew is not None and \
+                self.idx - THRESHOLD <= __prew.idx <= self.idx + THRESHOLD:
             result.append(__prew)
             __prew = __prew.get__prew()
 
         # Find all coincident points on the right side
         __next = self._next
-        while __next is not None and __next.idx == self.idx:
+        while __next is not None and \
+                self.idx - THRESHOLD <= __next.idx <= self.idx + THRESHOLD:
             result.append(__next)
             __next = __next.get__next()
 
@@ -279,13 +282,13 @@ class Rectangle(pygame.Rect):
         """A method that calculates the alignment status horizontally with other nodes"""
 
         # Check if this move would touch the left edge
-        if self.get_left_idx() + distance <= 0:
+        if self.get_left_idx() + distance - THRESHOLD <= 0:
             self.move_ip(-self.get_left_idx(), 0)
             self.update()
             return AlignPoint(0, 'left', 'window')
 
         # Check if this move would touch the right edge
-        if self.get_right_idx() + distance >= SCREEN_WIDTH:
+        if self.get_right_idx() + distance + THRESHOLD >= SCREEN_WIDTH:
             self.move_ip(SCREEN_WIDTH - 1 - self.get_right_idx(), 0)
             self.update()
             return AlignPoint(SCREEN_WIDTH - 1, 'right', 'window')
@@ -295,7 +298,13 @@ class Rectangle(pygame.Rect):
         self.update()
 
         # Check if it is aligned with the center of viewpoint (horizontal)
-        if self.get_center_horizontal_idx() == int(SCREEN_WIDTH / 2):
+        left_idx = self.get_center_horizontal_idx() - THRESHOLD
+        right_idx = self.get_center_horizontal_idx() + THRESHOLD
+        if left_idx <= int(SCREEN_WIDTH / 2) <= right_idx:
+            adjust_distance = int(SCREEN_WIDTH / 2) - \
+                self.get_center_horizontal_idx()
+            self.move_ip(adjust_distance, 0)
+            self.update()
             return AlignPoint(int(SCREEN_WIDTH / 2), 'center', 'window')
 
         # Check if it is aligned to the center of other nodes
@@ -319,6 +328,9 @@ class Rectangle(pygame.Rect):
 
         # Return the node that is aligned with the center of self, if exists
         if closest_node is not None:
+            adjust_distance = closest_node.idx - self.get_center_horizontal_idx()
+            self.move_ip(adjust_distance, 0)
+            self.update()
             return closest_node
 
         # Return the node that is aligned with the edge of self
@@ -392,24 +404,40 @@ class Rectangle(pygame.Rect):
                 top_left < top_right and \
                 top_left < bottom_left and \
                 top_left < bottom_right:
+            adjust_distance = closest_node_to_left_on_top.idx - \
+                self.get_left_idx()
+            self.move_ip(adjust_distance, 0)
+            self.update()
             return closest_node_to_left_on_top
 
         if closest_node_to_right_on_top is not None and \
                 top_right < top_left and \
                 top_right < bottom_left and \
                 top_right < bottom_right:
+            adjust_distance = closest_node_to_right_on_top.idx - \
+                self.get_right_idx()
+            self.move_ip(adjust_distance, 0)
+            self.update()
             return closest_node_to_right_on_top
 
         if closest_node_to_left_on_bottom is not None and \
                 bottom_left < top_left and \
                 bottom_left < top_right and \
                 bottom_left < bottom_right:
+            adjust_distance = closest_node_to_left_on_bottom.idx - \
+                self.get_left_idx()
+            self.move_ip(adjust_distance, 0)
+            self.update()
             return closest_node_to_left_on_bottom
 
         if closest_distance_to_right_on_bottom is not None and \
                 bottom_right < top_left and \
                 bottom_right < top_right and \
                 bottom_right < bottom_left:
+            adjust_distance = closest_node_to_right_on_bottom.idx - \
+                self.get_right_idx()
+            self.move_ip(adjust_distance, 0)
+            self.update()
             return closest_node_to_right_on_bottom
 
         return None
@@ -418,13 +446,13 @@ class Rectangle(pygame.Rect):
         """A method that calculates the alignment status vertically with other nodes"""
 
         # Check if this move would touch the top edge
-        if self.get_top_idx() + distance <= 0:
+        if self.get_top_idx() + distance - THRESHOLD <= 0:
             self.move_ip(0, -self.get_top_idx())
             self.update()
             return AlignPoint(0, 'top', 'window')
 
         # Check if this move would touch the bottom edge
-        if self.get_bottom_idx() + distance >= SCREEN_HEIGHT:
+        if self.get_bottom_idx() + distance + THRESHOLD >= SCREEN_HEIGHT:
             self.move_ip(0, SCREEN_HEIGHT - 1 - self.get_bottom_idx())
             self.update()
             return AlignPoint(SCREEN_HEIGHT - 1, 'bottom', "window")
@@ -434,10 +462,16 @@ class Rectangle(pygame.Rect):
         self.update()
 
         # Check if it is aligned with the center of the viewpoint (vertical)
-        if self.get_center_vertical_idx() == int(SCREEN_HEIGHT / 2):
+        top_idx = self.get_center_vertical_idx() - THRESHOLD
+        bottom_idx = self.get_center_vertical_idx() + THRESHOLD
+        if top_idx <= int(SCREEN_HEIGHT / 2) <= bottom_idx:
+            adjust_distance = int(SCREEN_HEIGHT / 2) - \
+                self.get_center_vertical_idx()
+            self.move_ip(0, adjust_distance)
+            self.update()
             return AlignPoint(int(SCREEN_HEIGHT / 2), 'center', 'window')
 
-        # Check if is aligned to the center of other nodes
+        # Check if it is aligned to the center of other nodes
         closest_node = None
         closest_distance = 0
         # Search all nodes that are aligned with self
@@ -458,6 +492,9 @@ class Rectangle(pygame.Rect):
 
         # Return the node that is aligned with the center of self, if exists
         if closest_node is not None:
+            adjust_distance = closest_node.idx - self.get_center_vertical_idx()
+            self.move_ip(0, adjust_distance)
+            self.update()
             return closest_node
 
         # Return the node that is aligned with the edge of self
@@ -535,24 +572,40 @@ class Rectangle(pygame.Rect):
                 left_top < left_bottom and \
                 left_top < right_top and \
                 left_top < right_bottom:
+            adjust_distance = closest_node_to_top_on_left.idx - \
+                self.get_top_idx()
+            self.move_ip(0, adjust_distance)
+            self.update()
             return closest_node_to_top_on_left
 
         if closest_node_to_top_on_right is not None and \
                 right_top < left_top and \
                 right_top < left_bottom and \
                 right_top < right_bottom:
+            adjust_distance = closest_node_to_top_on_right.idx - \
+                self.get_top_idx()
+            self.move_ip(0, adjust_distance)
+            self.update()
             return closest_node_to_top_on_right
 
         if closest_node_to_bottom_on_left is not None and \
                 left_bottom < left_top and \
                 left_bottom < right_top and \
                 left_bottom < right_bottom:
+            adjust_distance = closest_node_to_bottom_on_left.idx - \
+                self.get_bottom_idx()
+            self.move_ip(0, adjust_distance)
+            self.update()
             return closest_node_to_bottom_on_left
 
         if closest_node_to_bottom_on_right is not None and \
                 right_bottom < left_top and \
                 right_bottom < right_top and \
                 right_bottom < left_bottom:
+            adjust_distance = closest_node_to_bottom_on_right.idx - \
+                self.get_bottom_idx()
+            self.move_ip(0, adjust_distance)
+            self.update()
             return closest_node_to_bottom_on_right
 
         return None
@@ -787,7 +840,6 @@ def main():
 
         # - constant game speed / FPS
         clock.tick(FPS)
-
 
         # Initial the screen
 pygame.init()
