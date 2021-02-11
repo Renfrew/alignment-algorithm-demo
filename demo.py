@@ -24,8 +24,40 @@ class AlignPoint:
         self.prew = None
         self.next = None
 
-    def add(self, node):
-        pass
+    def add(self, another):
+        """Add another alignPoint into the linked list"""
+
+        # My next is None
+        if another.idx >= self.idx and self.next is None:
+            self.next = another
+            another.prew = self
+
+        # the new node should add to my next
+        elif another.idx >= self.idx and another.idx <= self.next.idx:
+            another.prew = self
+            another.next = self.next
+            another.next.prew = another
+            self.next = another
+
+        # the new node should go behind my next
+        elif another.idx >= self.idx:
+            self.next.add(another)
+
+        # My prew is None
+        elif self.prew is None:
+            self.prew = another
+            another.next = self
+
+        # the new node is my prew
+        elif self.prew.idx <= another.idx:
+            another.prew = self.prew
+            another.next = self
+            self.prew.next = another
+            self.prew = another
+
+        # the new node should go infront of my prew
+        else:
+            self.prew.add(another)
 
 
 class Rectangle(pygame.Rect):
