@@ -15,7 +15,7 @@ FPS = 30
 
 
 class AlignPoint:
-    """This is the doubly linked list class"""
+    """This is the doubly linked list class storing data for alignment module"""
 
     def __init__(self, idx, position, node):
         self.idx = idx
@@ -59,6 +59,9 @@ class AlignPoint:
         else:
             self.prew.add(another)
 
+    def relocated(self):
+        """Relocated self to another postion so the linked list are sorted"""
+
 
 class Rectangle(pygame.Rect):
     """This is the object that can align to other objects"""
@@ -92,14 +95,6 @@ class Rectangle(pygame.Rect):
         Rectangle.horizontal.add(self._right)
         Rectangle.vertical.add(self._center_vertical)
         Rectangle.vertical.add(self._bottom)
-
-    def get_horizontal_midpoint(self):
-        """Get the midpoint of the width"""
-        return self.width / 2
-
-    def get_vertical_midpoint(self):
-        """Get the midpoint of the height"""
-        return self.height / 2
 
     def move_horiontally(self, distance):
         """A method that calculates the alignment status horizontally with other nodes"""
