@@ -80,6 +80,54 @@ class AlignPoint:
 
     def relocate(self, distance):
         """Relocated self to another postion so the linked list are sorted"""
+        self.idx += distance
+
+        # Move self to the left side of the linked list
+        if distance < 0 and self._prew is not None and self._prew.idx > self.idx:
+            # Find the new location which can keep the list sorted
+            __prew = self._prew
+            while __prew.get__prew() is not None and \
+                    __prew.get__prew().idx > self.idx:
+
+                __prew = __prew.get__prew()
+
+            # Connect the prew and the next node of self (old location)
+            if self._prew is not None:
+                self._prew.set__next(self._next)
+            if self._next is not None:
+                self._next.set__prew(self._prew)
+
+            # Add self to the new location
+            # Prew side
+            if __prew.get__prew() is not None:
+                __prew.get__prew().set__next(self)
+            self._prew = __prew.get__prew()
+            # Next side
+            self._next = __prew
+            __prew.set__prew(self)
+
+        elif distance > 0 and self._next is not None and self._next.idx < self.idx:
+            # Find the new location which can keep the list sorted
+            __next = self._next
+            while __next.get__next() is not None and \
+                    __next.get__next().idx < self.idx:
+
+                __next = __next.get__next()
+
+            # Connect the prew and the next node of self (old location)
+            if self._prew is not None:
+                self._prew.set__next(self._next)
+            if self._next is not None:
+                self._next.set__prew(self._prew)
+
+            # Add self to the new location
+            # Next side
+            if __next.get__next() is not None:
+                __next.get__next().set__prew(self)
+            self._next = __next.get__next()
+            # Prew side
+            self._prew = __next
+            __next.set__next(self)
 
     def get_coincident_point(self) -> typing.List[AlignPoint]:
         """Find all the points in the linked list that has the same idx"""
@@ -174,8 +222,8 @@ class Rectangle(pygame.Rect):
         """A method that calculates the alignment status horizontally with other nodes"""
 
         # Check if this move would touch the left edge
-        if self._left.idx + distance <= 0:
-            self.move_ip(-self._left.idx, 0)
+        if self.get_left_idx() + distance <= 0:
+            self.move_ip(-self.get_left_idx(), 0)
             self.update()
             return AlignPoint(0, 'left', 'window')
 
@@ -290,10 +338,15 @@ def main():
             elif event.type == pygame.MOUSEMOTION:
                 if is_draging:
                     (click_x, click_y) = event.pos
-                    _node.move_horiontally(click_x - mouse_x)
-                    _node.move_vertically(click_y - mouse_y)
+                    result1 = _node.move_horiontally(click_x - mouse_x)
+                    result2 = _node.move_vertically(click_y - mouse_y)
                     mouse_x = click_x
                     mouse_y = click_y
+
+                    if result1 is not None:
+                        print(result1)
+                    if result2 is not None:
+                        print(result2)
 
             # if the user click the window close button.
             elif event.type == pygame.QUIT:
