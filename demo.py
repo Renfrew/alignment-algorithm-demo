@@ -8,6 +8,7 @@ Created by Liang Chen (Renfrew) on 2021-02-10.
 
 
 from __future__ import annotations
+import sys
 import typing
 import pygame
 from pygame.constants import K_ESCAPE
@@ -47,19 +48,19 @@ class AlignPoint:
         """Add another alignPoint into the linked list"""
 
         # My next is None
-        if another.idx >= self.idx and self._next is None:
+        if self.idx <= another.idx and self._next is None:
             self._next = another
             another.set__prew(self)
 
         # the new node should add to my next
-        elif another.idx >= self.idx and another.idx <= self._next.idx:
+        elif self.idx <= another.idx <= self._next.idx:
             another.set__prew(self)
             another.set__next(self._next)
             another.get__next().set__prew(another)
             self._next = another
 
         # the new node should go behind my next
-        elif another.idx >= self.idx:
+        elif self.idx <= another.idx:
             self._next.add(another)
 
         # My prew is None
@@ -149,7 +150,7 @@ class AlignPoint:
         return result
 
     def get_center_coincident_point(self) -> typing.List[AlignPoint]:
-        """Find all the points in the linked list that has the same idx"""
+        """Find all the center points in the linked list that has the same idx"""
 
         temp_result = self.get_coincident_point()
         result = []
@@ -159,6 +160,36 @@ class AlignPoint:
                 result.append(point)
 
         return result
+
+    def get_side_coincident_point(self) -> typing.List[AlignPoint]:
+        """Find all the side points in the linked list that has the same idx"""
+
+        temp_result = self.get_coincident_point()
+        result = []
+
+        for point in temp_result:
+            if point.position != 'center':
+                result.append(point)
+
+        return result
+
+    def print_all(self):
+        """The function to print the entired linked list"""
+        if self._prew is not None:
+            self._prew.print_all()
+        else:
+            self.print_next()
+
+    def print_next(self):
+        """The function to print all the next node in the linked list"""
+        self.print_self()
+        if self._next is not None:
+            self._next.print_next()
+
+    def print_self(self):
+        """The function tto print the self"""
+        print("Index: ", self.idx, " Position: ",
+              self.position, " Node: ", self.node)
 
 
 class Rectangle(pygame.Rect):
@@ -176,18 +207,24 @@ class Rectangle(pygame.Rect):
         super().__init__(_x, _y, _width, _height)
 
         self._left = AlignPoint(_x, 'left', self)
-        self._center_horizontal = AlignPoint(_x + _width / 2, 'center', self)
+        self._center_horizontal = AlignPoint(
+            int(_x + _width / 2), 'center', self)
         self._right = AlignPoint(_x + _width, 'right', self)
         self._top = AlignPoint(_y, 'top', self)
-        self._center_vertical = AlignPoint(_y + _height / 2, 'center', self)
+        self._center_vertical = AlignPoint(
+            int(_y + _height / 2), 'center', self)
         self._bottom = AlignPoint(_y + _height, 'bottom', self)
 
         # Add all align point to the list
         if Rectangle.horizontal is None:
             Rectangle.horizontal = self._left
+        else:
+            Rectangle.horizontal.add(self._left)
 
         if Rectangle.vertical is None:
             Rectangle.vertical = self._top
+        else:
+            Rectangle.vertical.add(self._top)
 
         Rectangle.horizontal.add(self._center_horizontal)
         Rectangle.horizontal.add(self._right)
@@ -218,6 +255,22 @@ class Rectangle(pygame.Rect):
         """return the bottom idx"""
         return self._bottom.idx
 
+    def get_top_point(self):
+        """return the _top"""
+        return self._top
+
+    def get_bottom_point(self):
+        """return the _bottom"""
+        return self._bottom
+
+    def get_left_point(self):
+        """return the _left"""
+        return self._left
+
+    def get_right_point(self):
+        """return the _right"""
+        return self._right
+
     def move_horiontally(self, distance) -> AlignPoint:
         """A method that calculates the alignment status horizontally with other nodes"""
 
@@ -238,8 +291,8 @@ class Rectangle(pygame.Rect):
         self.update()
 
         # Check if it is aligned to the center of viewpoint
-        if self.get_center_horizontal_idx() == SCREEN_WIDTH / 2:
-            return AlignPoint(SCREEN_WIDTH / 2, 'center', 'window')
+        if self.get_center_horizontal_idx() == int(SCREEN_WIDTH / 2):
+            return AlignPoint(int(SCREEN_WIDTH / 2), 'center', 'window')
 
         # Check if it is aligned to the center of other nodes
         closest_node = None
@@ -260,9 +313,100 @@ class Rectangle(pygame.Rect):
                 else:
                     closest_distance = bottom_distance
 
-        # Return the node that is aligned to self, if exists
+        # Return the node that is aligned with the center of self, if exists
         if closest_node is not None:
             return closest_node
+
+        # Return the node that is aligned with the edge of self
+        return self.move_horiontally_helper()
+
+    def move_horiontally_helper(self) -> AlignPoint:
+        """This is the helper function of move_horiontally
+
+            The function will find the closest node with a edge aligned with self
+        """
+        # Find the nodes that is aligned with the edge of self
+        nodes_aligned_with_left_edge = self._left.get_side_coincident_point()
+        nodes_aligned_with_right_edge = self._right.get_side_coincident_point()
+
+        (closest_node_to_left_on_top,
+         closest_distance_to_left_on_top,
+         closest_node_to_left_on_bottom,
+         closest_distance_to_left_on_bottom
+         ) = self.find_aligned_points(nodes_aligned_with_left_edge)
+
+        (closest_node_to_right_on_top,
+         closest_distance_to_right_on_top,
+         closest_node_to_right_on_bottom,
+         closest_distance_to_right_on_bottom
+         ) = self.find_aligned_points(nodes_aligned_with_right_edge)
+
+        # Remove aligned nodes which may be blocked by other nodes
+        if closest_node_to_left_on_top is not None and \
+            self.find_blocking_point(
+                self.get_left_point(),
+                closest_node_to_left_on_top.node,
+                self,
+                'horizontal'):
+            closest_node_to_left_on_top = None
+            closest_distance_to_left_on_top = sys.maxsize
+
+        if closest_node_to_right_on_top is not None and \
+            self.find_blocking_point(
+                self.get_right_point(),
+                closest_node_to_right_on_top.node,
+                self,
+                'horizontal'):
+            closest_node_to_right_on_top = None
+            closest_distance_to_right_on_top = sys.maxsize
+
+        if closest_node_to_left_on_bottom is not None and \
+            self.find_blocking_point(
+                self.get_left_point(),
+                self,
+                closest_node_to_left_on_bottom.node,
+                'horizontal'):
+            closest_node_to_left_on_bottom = None
+            closest_distance_to_left_on_bottom = sys.maxsize
+
+        if closest_node_to_right_on_bottom is not None and \
+            self.find_blocking_point(
+                self.get_right_point(),
+                self,
+                closest_node_to_right_on_bottom.node,
+                'horizontal'):
+            closest_node_to_right_on_bottom = None
+            closest_distance_to_right_on_bottom = sys.maxsize
+
+        # Output the result, which is the closest node to the moving node
+        top_left = closest_distance_to_left_on_top
+        top_right = closest_distance_to_right_on_top
+        bottom_left = closest_distance_to_left_on_bottom
+        bottom_right = closest_distance_to_right_on_bottom
+
+        if closest_node_to_left_on_top is not None and \
+                top_left < top_right and \
+                top_left < bottom_left and \
+                top_left < bottom_right:
+            return closest_node_to_left_on_top
+
+        if closest_node_to_right_on_top is not None and \
+                top_right < top_left and \
+                top_right < bottom_left and \
+                top_right < bottom_right:
+            return closest_node_to_right_on_top
+
+        if closest_node_to_left_on_bottom is not None and \
+                bottom_left < top_left and \
+                bottom_left < top_right and \
+                bottom_left < bottom_right:
+            return closest_node_to_left_on_bottom
+
+        if closest_distance_to_right_on_bottom is not None and \
+                bottom_right < top_left and \
+                bottom_right < top_right and \
+                bottom_right < bottom_left:
+            return closest_distance_to_right_on_bottom
 
         return None
 
@@ -270,6 +414,90 @@ class Rectangle(pygame.Rect):
         """A method that calculates the alignment status vertically with other nodes"""
 
         self.move_ip(0, distance)
+
+    def find_aligned_points(
+            self,
+            points: typing.List[AlignPoint],
+            direction='horizontal'):
+        """Find the closest aligned point of a given edge
+
+            Each direction would have one
+        """
+
+        # Variables used to determine the final result
+        first_closest_node = None
+        first_closest_distance = sys.maxsize
+        second_closest_node = None
+        second_closest_distance = sys.maxsize
+
+        for __point in points:
+            # Variables used to store temporary value
+            first_distance = 0
+            second_distance = 0
+            if direction == 'horizontal':
+                first_distance = self.get_top_idx() \
+                    - __point.node.get_bottom_idx()
+                second_distance = __point.node.get_top_idx() \
+                    - self.get_bottom_idx()
+            else:
+                first_distance = self.get_left_idx() \
+                    - __point.node.get_right_idx()
+                second_distance = __point.node.get_left_idx() \
+                    - self.get_right_idx()
+
+            if first_distance > 0 and first_closest_node is None:
+                first_closest_node = __point
+                first_closest_distance = first_distance
+            elif 0 < first_distance < first_closest_distance:
+                first_closest_node = __point
+                first_closest_distance = first_distance
+            elif second_distance > 0 and second_closest_node is None:
+                second_closest_node = __point
+                second_closest_distance = second_distance
+            elif 0 < second_distance < second_closest_distance:
+                second_closest_node = __point
+                second_closest_distance = second_distance
+
+        return (first_closest_node,
+                first_closest_distance,
+                second_closest_node,
+                second_closest_distance)
+
+    def find_blocking_point(
+            self,
+            line: AlignPoint,
+            start: Rectangle,
+            end: Rectangle,
+            direction='horizontal'):
+        """Find if there is a node between begin and end position cut the line
+
+            Return true is the line is blocking, otherwise false
+        """
+
+        if start is None or end is None:
+            return True
+
+        if direction == 'horizontal':
+            __start_point = start.get_bottom_point()
+            __end_point = end.get_top_point()
+
+            while __start_point.idx != __end_point.idx:
+                if __start_point.node.get_left_idx() < \
+                        line.idx < __end_point.node.get_right_idx():
+                    return True
+                __start_point = __start_point.get__next()
+
+        else:
+            __start_point = start.get_right_point()
+            __end_point = end.get_left_point()
+
+            while __start_point.idx != __end_point.idx:
+                if __start_point.node.get_top_idx() < \
+                        line.idx < __end_point.node.get_bottom_idx():
+                    return True
+                __start_point = __start_point.get__next()
+
+        return False
 
     def update(self):
         """Update the position on the linked list if self had moved"""
@@ -298,7 +526,7 @@ def main():
     clock = pygame.time.Clock()
 
     # list of all nodes
-    nodes = []
+    nodes: typing.List[Rectangle] = []
 
     # variables used in handling drag event
     mouse_x = 0
@@ -306,7 +534,10 @@ def main():
     _node = None
 
     # Create a triangle
-    nodes.append(Rectangle(100, 200, 80, 40))
+    nodes.append(Rectangle(200, 100, 60, 40))
+    nodes.append(Rectangle(300, 400, 80, 40))
+    nodes.append(Rectangle(170, 300, 80, 80))
+    nodes.append(Rectangle(600, 200, 100, 100))
 
     # Initial the Rectangle
     Rectangle.screen = screen
