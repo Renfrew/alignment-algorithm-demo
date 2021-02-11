@@ -17,6 +17,9 @@ from pygame.constants import K_ESCAPE
 SCREEN_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT) = (800, 600)
 FPS = 30
 
+DEFAULT_COLOR = (199, 21, 133)
+HIGHTLIGHT_COLOR = (199, 21, 133)
+
 
 class AlignPoint:
     """This is the doubly linked list class storing data for alignment module"""
@@ -484,7 +487,7 @@ class Rectangle(pygame.Rect):
 
             while __start_point.idx != __end_point.idx:
                 if __start_point.node.get_left_idx() < \
-                        line.idx < __end_point.node.get_right_idx():
+                        line.idx < __start_point.node.get_right_idx():
                     return True
                 __start_point = __start_point.get__next()
 
@@ -494,7 +497,7 @@ class Rectangle(pygame.Rect):
 
             while __start_point.idx != __end_point.idx:
                 if __start_point.node.get_top_idx() < \
-                        line.idx < __end_point.node.get_bottom_idx():
+                        line.idx < __start_point.node.get_bottom_idx():
                     return True
                 __start_point = __start_point.get__next()
 
@@ -521,6 +524,20 @@ class Rectangle(pygame.Rect):
         pygame.draw.rect(screen, (0, 191, 255), self)
 
 
+def draw_line(point: AlignPoint, shape: Rectangle, direction='horizontal'):
+    """ Draw a line between two rectangle"""
+    if direction == 'horizontal':
+        pygame.draw.line(screen,
+                         HIGHTLIGHT_COLOR,
+                         (point.idx, point.node.get_bottom_idx()),
+                         (point.idx, shape.get_bottom_idx()))
+    else:
+        pygame.draw.line(screen,
+                         HIGHTLIGHT_COLOR,
+                         (point.node.get_right_idx(), point.idx),
+                         (shape.get_right_idx(), point.idx))
+
+
 def main():
     """This is the main function of the demo"""
 
@@ -538,8 +555,8 @@ def main():
 
     # Create a triangle
     nodes.append(Rectangle(200, 100, 60, 40))
-    nodes.append(Rectangle(300, 400, 80, 40))
-    nodes.append(Rectangle(170, 300, 80, 80))
+    # nodes.append(Rectangle(300, 400, 80, 40))
+    # nodes.append(Rectangle(170, 300, 80, 80))
     nodes.append(Rectangle(600, 200, 100, 100))
 
     # Initial the Rectangle
@@ -598,18 +615,20 @@ def main():
         if _node is not None:
             # Horizontal direction
             if horizontal_aligned_node is not None:
-                pygame.draw.rect(screen, (199, 21, 133), _node)
+                pygame.draw.rect(screen, HIGHTLIGHT_COLOR, _node)
                 if horizontal_aligned_node.node != "window":
                     pygame.draw.rect(screen,
-                                     (199, 21, 133),
+                                     HIGHTLIGHT_COLOR,
                                      horizontal_aligned_node.node)
+                    draw_line(horizontal_aligned_node, _node)
             # Vertical direction
             if vertical_aligned_node is not None:
-                pygame.draw.rect(screen, (199, 21, 133), _node)
+                pygame.draw.rect(screen, HIGHTLIGHT_COLOR, _node)
                 if vertical_aligned_node.node != "window":
                     pygame.draw.rect(screen,
-                                     (199, 21, 133),
+                                     HIGHTLIGHT_COLOR,
                                      vertical_aligned_node.node)
+                    draw_line(vertical_aligned_node, _node)
 
         # Update the screen
         pygame.display.flip()
@@ -617,8 +636,7 @@ def main():
         # - constant game speed / FPS
         clock.tick(FPS)
 
-
-# Initial the screen
+        # Initial the screen
 pygame.init()
 pygame.display.set_caption("Alignment Deme")
 screen = pygame.display.set_mode(SCREEN_SIZE)
